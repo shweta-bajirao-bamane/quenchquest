@@ -65,6 +65,10 @@ class HomeHero(models.Model):
 
     def __str__(self):
         return self.title
+    
+class WhoWeAre(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)  
+    description = models.TextField(blank=True, null=True)
 
 
 class CoreObjective(models.Model):
@@ -77,12 +81,12 @@ class CoreObjective(models.Model):
 
 class ProgramHome(models.Model):      # home and program section same API used
     section = models.CharField(max_length=200, blank=True, null=True)
-    description = models.TextField() 
+    description = models.TextField(blank=True, null=True) 
     title = models.CharField(max_length=200,blank=True, null=True)
     sub_description = models.TextField(blank=True, null=True)    
     key_activities = models.TextField(blank=True, null=True)
     target = models.CharField(max_length=100, blank=True, null=True)
-    icon_url = models.URLField(blank=True, null=True)
+    # icon_url = models.URLField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.section, self.title
@@ -117,38 +121,72 @@ class News(models.Model):                   # same model use for Upcoming Fundra
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self):  
         return self.title
     
     
 # About Us Section
 
-# class AboutIntro(models.Model):
-#     title = models.CharField(max_length=200)
-#     description = models.TextField()
+class AboutIntro(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)  # about intro, objectives,who we are
+    description = models.TextField(blank=True, null=True)
 
-# class AboutObjective(models.Model):
-#     title = models.CharField(max_length=150)
-#     description = models.TextField()
+class AboutWhoWeAre(models.Model):
+    section = models.CharField(max_length=150,blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class MissionVisionValue(models.Model):
     type = models.CharField(
         max_length=20,
         choices=[("mission", "Mission"), ("vision", "Vision"), ("value", "Value")]
     )
-    icon_url = models.URLField(blank=True, null=True)
+    # icon_url = models.URLField(blank=True, null=True)
     title = models.CharField(max_length=100)
     description = models.TextField()
     updated_at = models.DateTimeField(auto_now=True)
+    
+class CoreObjectives(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)  
+    description = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.section
 
 class Leadership(models.Model):
     section = models.CharField(max_length=100, blank=True, null=True)  
     description = models.TextField(blank=True, null=True)
     name = models.CharField(max_length=100)
-    sub_description = models.CharField(max_length=100, blank=True, null=True)
+    sub_description = models.TextField(blank=True, null=True)
     designation = models.CharField(max_length=100, blank=True, null=True)
     image = models.ImageField(upload_to="leadership/")
     updated_at = models.DateTimeField(auto_now=True)
+    
+class SliderImage(models.Model):
+    title = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="sliders/")
+    slider = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.title
+    
+class Partners(models.Model):
+    section = models.CharField(max_length=100, blank=True, null=True)  
+    description = models.TextField(blank=True, null=True)
+    image1 = models.ImageField(upload_to="partners/", blank=True, null=True)
+    image2 = models.ImageField(upload_to="partners/", blank=True, null=True)    
+    image3 = models.ImageField(upload_to="partners/", blank=True, null=True)
+    image4 = models.ImageField(upload_to="partners/", blank=True, null=True)  
+    image5 = models.ImageField(upload_to="partners/", blank=True, null=True)
+    image6 = models.ImageField(upload_to="partners/", blank=True, null=True)  
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.section  
+    
 
 # # Journey / Milestones
 # class Milestone(models.Model):
@@ -158,7 +196,46 @@ class Leadership(models.Model):
 class Geography(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
+    
+    
+# program API models
+class ProgramIntro(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.section 
+    
+class ProgramCard(models.Model):
+    title = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    activities = models.CharField(max_length=200, blank=True, null=True)
+    activity_points = models.TextField(blank=True, null=True)
+    target = models.CharField(max_length=100, blank=True, null=True)
+    benefits = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.title
+    
+class ProgramSlider(models.Model):
+    title = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="sliders/")
+    slider = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.title
+    
+class ProgramMission(models.Model):
+    section = models.CharField(max_length=200)
+    description = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.section
     
 # Project/imapct page API models
 class ProjectCategory(models.Model):
@@ -167,22 +244,26 @@ class ProjectCategory(models.Model):
 
     def __str__(self):
         return self.name
-    
+
+
 class Project(models.Model):
-    category = models.ForeignKey(ProjectCategory, related_name="projects", on_delete=models.CASCADE)
-    tag = models.CharField(max_length=100, blank=True, null=True) #Rural/Urban slum
+    category = models.ForeignKey(
+        ProjectCategory,
+        related_name="projects",
+        on_delete=models.CASCADE
+    )
+    tag = models.CharField(max_length=100, blank=True, null=True)
     title = models.CharField(max_length=200)
     sub_description = models.TextField()
     image = models.ImageField(upload_to="projects/", blank=True, null=True)
-    
+
     imapct_1_label = models.CharField(max_length=100, blank=True, null=True)
     imapct_1_value = models.CharField(max_length=50, blank=True, null=True)
     imapct_2_label = models.CharField(max_length=100, blank=True, null=True)
     imapct_2_value = models.CharField(max_length=50, blank=True, null=True)
     imapct_3_label = models.CharField(max_length=100, blank=True, null=True)
     imapct_3_value = models.CharField(max_length=50, blank=True, null=True)
-    
-    is_active = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -250,14 +331,32 @@ class CorporatePartnershipSection(models.Model):
     
     
 # Contact card model
+class ContactHeader(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.section
+
 class ContactCard(models.Model):
     title = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    icon_url = models.URLField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return self.title
+    
+class ContactDetail(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.section
     
 class FAQ(models.Model):
     question = models.CharField(max_length=255)

@@ -17,7 +17,7 @@ class CoreObjectiveAdmin(admin.ModelAdmin):
 
 @admin.register(ProgramHome)
 class ProgramHomeAdmin(admin.ModelAdmin):
-    list_display = ('section', 'title', 'description', 'sub_description', 'key_activities', 'target', 'icon_url', 'updated_at')
+    list_display = ('section', 'title', 'description', 'sub_description', 'key_activities', 'target', 'updated_at')
     search_fields = ('section', 'title', 'target')
     ordering = ('-updated_at',)
     
@@ -44,6 +44,6 @@ class NewsAdmin(admin.ModelAdmin):
 
 @admin.register(MissionVisionValue)
 class MissionVisionValueAdmin(admin.ModelAdmin):
-    list_display = ('type', 'icon_url', 'title', 'description', 'updated_at')
+    list_display = ('type', 'title', 'description', 'updated_at')
     search_fields = ('type', 'title')
     ordering = ('-updated_at',)
