@@ -78,7 +78,9 @@ urlpatterns = [
     path("admin/donations/<int:pk>/", DonationListAPIView.as_view()),
     path("volunteer/", VolunteerCreateAPIView.as_view(), name="become-volunteer"),
     path("corporate-partnership/", CorporatePartnershipSectionAPIView.as_view()),
-    path("admin/corporate-partnership/", CorporatePartnershipSectionCreateAPIView.as_view()),
+    path("corporate-partnership/<int:pk>/", CorporatePartnershipSectionAPIView.as_view()),
+    path("events/", EventsAPIView.as_view()),
+    path("events/<int:pk>/", EventsAPIView.as_view()),
     
     # Contact Section APIs
     path("contact-header/", ContactHeaderAPIView.as_view()),

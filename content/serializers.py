@@ -48,11 +48,17 @@ class TrainingContentSerializer(serializers.ModelSerializer):
 #             return request.build_absolute_uri(obj.image.url)
 #         return None
 class HomeHeroSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False)
+    image_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = HomeHero
         fields = "__all__"
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
         
 class WhoWeAreSerializer(serializers.ModelSerializer):
     class Meta:
@@ -90,9 +96,18 @@ class TrainingSerializer(serializers.ModelSerializer):
 
 
 class NewsSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = News
         fields = "__all__"
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
         
 # About us Section
 
@@ -117,7 +132,6 @@ class CoreObjectivesSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class LeadershipSerializer(serializers.ModelSerializer):
-    image = Base64ImageField(required=False)
     image_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -131,7 +145,6 @@ class LeadershipSerializer(serializers.ModelSerializer):
         return None
     
 class SliderImageSerializer(serializers.ModelSerializer):
-    image = Base64ImageField(required=False)
     image_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -143,6 +156,7 @@ class SliderImageSerializer(serializers.ModelSerializer):
         if obj.image and request:
             return request.build_absolute_uri(obj.image.url)
         return None
+
     
 class PartnersSerializer(serializers.ModelSerializer):
     image1_url = serializers.SerializerMethodField()
@@ -193,7 +207,6 @@ class ProgramCardSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
 class ProgramSliderSerializer(serializers.ModelSerializer):
-    image = Base64ImageField(required=False)
     image_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -220,9 +233,9 @@ class ProjectCategorySerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    image = Base64ImageField(required=False)
-    category_name = serializers.CharField(source="category.name", read_only=True)
-    category_slug = serializers.CharField(source="category.slug", read_only=True)
+    category_detail = ProjectCategorySerializer(
+        source="category", read_only=True
+    )
     image_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -252,6 +265,19 @@ class CorporatePartnershipSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = CorporatePartnershipSection
         fields = "__all__"
+        
+class EventsSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Events
+        fields = "__all__"
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
         
 # Contact Section Serializer
 class ContactHeaderSerializer(serializers.ModelSerializer):

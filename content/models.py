@@ -89,7 +89,7 @@ class ProgramHome(models.Model):      # home and program section same API used
     # icon_url = models.URLField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
-        return self.section, self.title
+        return self.title
 
 
 class ImpactStat(models.Model):
@@ -322,10 +322,22 @@ class CorporatePartnershipSection(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     order = models.PositiveIntegerField(default=1)
-    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.title
+    
+class Events(models.Model):
+    section = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    tag = models.CharField(max_length=100, blank=True, null=True)
+    title = models.CharField(max_length=200, blank=True, null=True)
+    event_date = models.DateField(blank=True, null=True)
+    location = models.CharField(max_length=200, blank=True, null=True)
+    sub_description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="events/", blank=True, null=True)
+    
     def __str__(self):
         return self.title
     
@@ -342,6 +354,7 @@ class ContactHeader(models.Model):
 class ContactCard(models.Model):
     title = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    icon_key = models.CharField(max_length=50, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
@@ -359,6 +372,8 @@ class ContactDetail(models.Model):
         return self.section
     
 class FAQ(models.Model):
+    section = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     question = models.CharField(max_length=255)
     answer = models.TextField()
     order = models.PositiveIntegerField(default=1)

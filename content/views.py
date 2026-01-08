@@ -125,7 +125,7 @@ class TrainingContentAPIView(APIView):
         return Response(serializer.data, status=201)
     
     
-# single home api
+# ------------------single home api---------------------------
 
 class HomeAPIView(APIView):
     permission_classes = [AllowAny]
@@ -141,30 +141,38 @@ class HomeAPIView(APIView):
         })
         
 class HomeHeroAPIView(APIView):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated, IsSuperUser]
     permission_classes = [AllowAny]
-    
-    def get(self, request):
-        serializer = HomeHeroSerializer(HomeHero.objects.all(), many=True)
-        return Response(serializer.data)
+    parser_classes = (MultiPartParser, FormParser)
 
+    # 🔹 GET → ALL HERO DATA
+    def get(self, request):
+        serializer = HomeHeroSerializer(
+            HomeHero.objects.all(),
+            many=True,
+            context={"request": request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # 🔹 POST → CREATE → RETURN CREATED OBJECT
     def post(self, request):
-        serializer = HomeHeroSerializer(data=request.data)
+        serializer = HomeHeroSerializer(
+            data=request.data,
+            context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    parser_classes = (MultiPartParser, FormParser)
 
+    # 🔹 PUT → UPDATE ONE → RETURN UPDATED OBJECT
     def put(self, request, pk):
         hero = get_object_or_404(HomeHero, pk=pk)
 
         serializer = HomeHeroSerializer(
             hero,
             data=request.data,
-            partial=True
+            partial=True,
+            context={"request": request}
         )
 
         if serializer.is_valid():
@@ -172,22 +180,20 @@ class HomeHeroAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
+
+    # 🔹 DELETE → DELETE ONE → RETURN REMAINING DATA
     def delete(self, request, pk):
-        try:
-            hero = HomeHero.objects.get(pk=pk)
-            hero.delete()
-            return Response(
-                {"message": "Home hero deleted successfully"},
-                status=status.HTTP_204_NO_CONTENT
-            )
-        except HomeHero.DoesNotExist:
-            return Response(
-                {"error": "This home hero is already deleted or does not exist"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-            
+        hero = get_object_or_404(HomeHero, pk=pk)
+        hero.delete()
+
+        remaining_data = HomeHeroSerializer(
+            HomeHero.objects.all(),
+            many=True,
+            context={"request": request}
+        )
+        return Response(remaining_data.data, status=status.HTTP_200_OK)
+    
+              
 class WhoWeAreAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -386,20 +392,6 @@ class ProgramHomeAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-
-    # def delete(self, request, pk):
-    #     try:
-    #         Program = ProgramHome.objects.get(pk=pk)
-    #         Program.delete()
-    #         return Response(
-    #             {"message": "Program deleted successfully"},
-    #             status=status.HTTP_204_NO_CONTENT
-    #         )
-    #     except ProgramHome.DoesNotExist:
-    #         return Response(
-    #             {"error": "This program is already deleted or does not exist"},
-    #             status=status.HTTP_404_NOT_FOUND
-    #         )
     
     def delete(self, request, pk):
         try:
@@ -500,20 +492,6 @@ class ImpactStatAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-    
-    # def delete(self, request, pk):
-    #     try:
-    #         impact_stat = ImpactStat.objects.get(pk=pk)
-    #         impact_stat.delete()
-    #         return Response(
-    #             {"message": "Impact stat deleted successfully"},
-    #             status=status.HTTP_204_NO_CONTENT
-    #         )
-    #     except ImpactStat.DoesNotExist:
-    #         return Response(
-    #             {"error": "This impact stat is already deleted or does not exist"},
-    #             status=status.HTTP_404_NOT_FOUND
-    #         )
     def delete(self, request, pk):
         try:
             impact_stat = ImpactStat.objects.get(pk=pk)
@@ -550,47 +528,78 @@ class TrainingAPIView(APIView):
 
 
 class NewsAPIView(APIView):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated, IsSuperUser]
-    # permission_classes = [IsAdminUser]
     permission_classes = [AllowAny]
-    
-    def get(self, request):
-        
-        serializer = NewsSerializer(News.objects.all().order_by("-created_at"), many=True)
-        return Response(serializer.data)
 
+    # 🔹 GET → ALL NEWS
+    def get(self, request):
+        news = News.objects.all().order_by("-created_at")
+        serializer = NewsSerializer(
+            news, many=True, context={"request": request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # 🔹 POST → ADD SINGLE NEWS (form-data supported)
     def post(self, request):
-        serializer = NewsSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, 201)
-        return Response(serializer.errors, 400)
-    
+        serializer = NewsSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # return ALL news after insert
+        all_news = News.objects.all().order_by("-created_at")
+        return Response(
+            NewsSerializer(all_news, many=True, context={"request": request}).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    # 🔹 PUT → UPDATE ONE → RETURN ALL
     def put(self, request, pk):
-        news = News.objects.get(pk=pk)
-        serializer = NewsSerializer(news, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, 200)
-        return Response(serializer.errors, 400)
-    
+        try:
+            news = News.objects.get(pk=pk)
+        except News.DoesNotExist:
+            return Response(
+                {"error": "News not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = NewsSerializer(
+            news,
+            data=request.data,
+            partial=True,
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # return ALL news
+        all_news = News.objects.all().order_by("-created_at")
+        return Response(
+            NewsSerializer(all_news, many=True, context={"request": request}).data,
+            status=status.HTTP_200_OK
+        )
+
+    # 🔹 DELETE → DELETE ONE → RETURN ALL
     def delete(self, request, pk):
         try:
             news = News.objects.get(pk=pk)
             news.delete()
-            return Response(
-                {"message": "News deleted successfully"},
-                status=status.HTTP_204_NO_CONTENT
-            )
         except News.DoesNotExist:
             return Response(
                 {"error": "This news is already deleted or does not exist"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # return ALL remaining news
+        all_news = News.objects.all().order_by("-created_at")
+        return Response(
+            NewsSerializer(all_news, many=True, context={"request": request}).data,
+            status=status.HTTP_200_OK
+        )
 
-# -------------About us Section--------------
+
+# ----------------------About us Section--------------------------
+
 class AboutAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -792,29 +801,24 @@ class CoreObjectivesAPIView(APIView):
 
 
 class LeadershipAPIView(APIView):
-    # permission_classes = [IsAdminUser]
     permission_classes = [AllowAny]
+    parser_classes = (MultiPartParser, FormParser)
 
     # 🔹 GET → ALL DATA
     def get(self, request):
+        data = Leadership.objects.all()
         serializer = LeadershipSerializer(
-            Leadership.objects.all(),
-            many=True,
-            context={"request": request}
+            data, many=True, context={"request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 🔹 POST → MULTIPLE ADD
     def post(self, request):
-        if not isinstance(request.data, list):
-            return Response(
-                {"error": "Expected a list of leadership objects"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        is_many = isinstance(request.data, list)
 
         serializer = LeadershipSerializer(
             data=request.data,
-            many=True,
+            many=is_many,
             context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -828,7 +832,7 @@ class LeadershipAPIView(APIView):
         )
         return Response(all_data.data, status=status.HTTP_201_CREATED)
 
-    # 🔹 PUT → UPDATE ONE (id), RETURN ALL
+    # 🔹 PUT → UPDATE ONE → RETURN ALL
     def put(self, request, pk):
         try:
             leadership = Leadership.objects.get(pk=pk)
@@ -847,7 +851,6 @@ class LeadershipAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # return ALL data
         all_data = LeadershipSerializer(
             Leadership.objects.all(),
             many=True,
@@ -855,18 +858,16 @@ class LeadershipAPIView(APIView):
         )
         return Response(all_data.data, status=status.HTTP_200_OK)
 
-    # 🔹 DELETE → DELETE ONE (id), RETURN ALL
+    # 🔹 DELETE → DELETE ONE → RETURN ALL
     def delete(self, request, pk):
         try:
-            leadership = Leadership.objects.get(pk=pk)
-            leadership.delete()
+            Leadership.objects.get(pk=pk).delete()
         except Leadership.DoesNotExist:
             return Response(
-                {"error": "Leadership already deleted or not found"},
+                {"error": "Leadership not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # return ALL remaining data
         all_data = LeadershipSerializer(
             Leadership.objects.all(),
             many=True,
@@ -874,12 +875,10 @@ class LeadershipAPIView(APIView):
         )
         return Response(all_data.data, status=status.HTTP_200_OK)
 
-
 class SliderImageAPIView(APIView):
-    # permission_classes = [IsAdminUser]
     permission_classes = [AllowAny]
 
-    # 🔹 GET → ALL SLIDER IMAGES
+    # 🔹 GET → ALL
     def get(self, request):
         serializer = SliderImageSerializer(
             SliderImage.objects.all(),
@@ -888,31 +887,33 @@ class SliderImageAPIView(APIView):
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # 🔹 POST → ADD MULTIPLE SLIDER IMAGES
+    # 🔹 POST → SINGLE (form-data) OR MULTIPLE (JSON)
     def post(self, request):
-        if not isinstance(request.data, list):
-            return Response(
-                {"error": "Expected a list of slider images"},
-                status=status.HTTP_400_BAD_REQUEST
+        if isinstance(request.data, list):
+            serializer = SliderImageSerializer(
+                data=request.data,
+                many=True,
+                context={"request": request}
+            )
+        else:
+            serializer = SliderImageSerializer(
+                data=request.data,
+                context={"request": request}
             )
 
-        serializer = SliderImageSerializer(
-            data=request.data,
-            many=True,
-            context={"request": request}
-        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # return ALL slider images
-        all_data = SliderImageSerializer(
-            SliderImage.objects.all(),
-            many=True,
-            context={"request": request}
+        return Response(
+            SliderImageSerializer(
+                SliderImage.objects.all(),
+                many=True,
+                context={"request": request}
+            ).data,
+            status=status.HTTP_201_CREATED
         )
-        return Response(all_data.data, status=status.HTTP_201_CREATED)
 
-    # 🔹 PUT → UPDATE ONE SLIDER IMAGE, RETURN ALL
+    # 🔹 PUT → UPDATE ONE → RETURN ALL
     def put(self, request, pk):
         try:
             slider = SliderImage.objects.get(pk=pk)
@@ -931,33 +932,34 @@ class SliderImageAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # return ALL slider images
-        all_data = SliderImageSerializer(
-            SliderImage.objects.all(),
-            many=True,
-            context={"request": request}
+        return Response(
+            SliderImageSerializer(
+                SliderImage.objects.all(),
+                many=True,
+                context={"request": request}
+            ).data,
+            status=status.HTTP_200_OK
         )
-        return Response(all_data.data, status=status.HTTP_200_OK)
 
-    # 🔹 DELETE → DELETE ONE SLIDER IMAGE, RETURN ALL
+    # 🔹 DELETE → DELETE ONE → RETURN ALL
     def delete(self, request, pk):
         try:
-            slider = SliderImage.objects.get(pk=pk)
-            slider.delete()
+            SliderImage.objects.get(pk=pk).delete()
         except SliderImage.DoesNotExist:
             return Response(
                 {"error": "Slider image already deleted or not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # return ALL remaining slider images
-        all_data = SliderImageSerializer(
-            SliderImage.objects.all(),
-            many=True,
-            context={"request": request}
+        return Response(
+            SliderImageSerializer(
+                SliderImage.objects.all(),
+                many=True,
+                context={"request": request}
+            ).data,
+            status=status.HTTP_200_OK
         )
-        return Response(all_data.data, status=status.HTTP_200_OK)
-    
+
     
 class PartnersAPIView(APIView):
     # permission_classes = [IsAdminUser]
@@ -1055,7 +1057,8 @@ class GeographyAPIView(APIView):
         return Response(serializer.data)
     
     
-# ``Program API Views    
+# -------------------------Program API Views------------------------
+    
 class ProgramIntroAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -1171,10 +1174,9 @@ class ProgramCardAPIView(APIView):
 
 
 class ProgramSliderAPIView(APIView):
-    # permission_classes = [IsAdminUser]
     permission_classes = [AllowAny]
 
-    # 🔹 GET → ALL SLIDER IMAGES
+    # 🔹 GET → ALL
     def get(self, request):
         serializer = ProgramSliderSerializer(
             ProgramSlider.objects.all(),
@@ -1183,31 +1185,33 @@ class ProgramSliderAPIView(APIView):
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # 🔹 POST → ADD MULTIPLE SLIDER IMAGES
+    # 🔹 POST → SINGLE (form-data) OR MULTIPLE (JSON)
     def post(self, request):
-        if not isinstance(request.data, list):
-            return Response(
-                {"error": "Expected a list of slider images"},
-                status=status.HTTP_400_BAD_REQUEST
+        if isinstance(request.data, list):
+            serializer = ProgramSliderSerializer(
+                data=request.data,
+                many=True,
+                context={"request": request}
+            )
+        else:
+            serializer = ProgramSliderSerializer(
+                data=request.data,
+                context={"request": request}
             )
 
-        serializer = ProgramSliderSerializer(
-            data=request.data,
-            many=True,
-            context={"request": request}
-        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # return ALL slider images
-        all_data = ProgramSliderSerializer(
-            ProgramSlider.objects.all(),
-            many=True,
-            context={"request": request}
+        return Response(
+            ProgramSliderSerializer(
+                ProgramSlider.objects.all(),
+                many=True,
+                context={"request": request}
+            ).data,
+            status=status.HTTP_201_CREATED
         )
-        return Response(all_data.data, status=status.HTTP_201_CREATED)
 
-    # 🔹 PUT → UPDATE ONE SLIDER IMAGE, RETURN ALL
+    # 🔹 PUT → UPDATE ONE → RETURN ALL
     def put(self, request, pk):
         try:
             slider = ProgramSlider.objects.get(pk=pk)
@@ -1226,33 +1230,35 @@ class ProgramSliderAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # return ALL slider images
-        all_data = ProgramSliderSerializer(
-            ProgramSlider.objects.all(),
-            many=True,
-            context={"request": request}
+        return Response(
+            ProgramSliderSerializer(
+                ProgramSlider.objects.all(),
+                many=True,
+                context={"request": request}
+            ).data,
+            status=status.HTTP_200_OK
         )
-        return Response(all_data.data, status=status.HTTP_200_OK)
 
-    # 🔹 DELETE → DELETE ONE SLIDER IMAGE, RETURN ALL
+    # 🔹 DELETE → DELETE ONE → RETURN ALL
     def delete(self, request, pk):
         try:
-            slider = ProgramSlider.objects.get(pk=pk)
-            slider.delete()
+            ProgramSlider.objects.get(pk=pk).delete()
         except ProgramSlider.DoesNotExist:
             return Response(
                 {"error": "Program slider already deleted or not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # return ALL remaining slider images
-        all_data = ProgramSliderSerializer(
-            ProgramSlider.objects.all(),
-            many=True,
-            context={"request": request}
+        return Response(
+            ProgramSliderSerializer(
+                ProgramSlider.objects.all(),
+                many=True,
+                context={"request": request}
+            ).data,
+            status=status.HTTP_200_OK
         )
-        return Response(all_data.data, status=status.HTTP_200_OK)
-    
+
+  
 class ProgramMissionAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -1290,10 +1296,11 @@ class ProgramMissionAPIView(APIView):
   
 
 
-# Project/Impact Section API Views
+# ---------------------Project/Impact Section API Views------------------------
 
-# ------------------ CATEGORY API ------------------
+# =============== CATEGORY API ==================
 class ProjectCategoryAPIView(APIView):
+    permission_classes = [AllowAny]
 
     def get(self, request):
         categories = ProjectCategory.objects.all()
@@ -1301,22 +1308,21 @@ class ProjectCategoryAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = ProjectCategorySerializer(data=request.data)
+        serializer = ProjectCategorySerializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# ------------------ PROJECT API ------------------
+# ===================== PROJECT API ==================
 class ProjectAPIView(APIView):
+    permission_classes = [AllowAny]
 
-    # GET → All projects or category-wise
-    # /api/projects/?category=education
+    # 🔹 GET (filter by category slug)
     def get(self, request):
         category_slug = request.query_params.get("category")
 
-        projects = Project.objects.all().order_by("-updated_at")
-
+        projects = Project.objects.all()
         if category_slug:
             projects = projects.filter(category__slug=category_slug)
 
@@ -1325,28 +1331,28 @@ class ProjectAPIView(APIView):
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # POST → Add MULTIPLE projects
+    # 🔹 POST → MULTIPLE ADD → RETURN ALL
     def post(self, request):
+        is_many = isinstance(request.data, list)
+
         serializer = ProjectSerializer(
-            data=request.data, many=True, context={"request": request}
+            data=request.data,
+            many=is_many,
+            context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        all_projects = Project.objects.all().order_by("-updated_at")
+        all_projects = Project.objects.all()
         return Response(
-            ProjectSerializer(all_projects, many=True, context={"request": request}).data,
+            ProjectSerializer(
+                all_projects, many=True, context={"request": request}
+            ).data,
             status=status.HTTP_201_CREATED
         )
 
-    # PUT → Update one project → Return ALL
-    def put(self, request, pk=None):
-        if not pk:
-            return Response(
-                {"error": "Project ID is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+    # 🔹 PUT → UPDATE ONE → RETURN ALL
+    def put(self, request, pk):
         try:
             project = Project.objects.get(pk=pk)
         except Project.DoesNotExist:
@@ -1364,96 +1370,36 @@ class ProjectAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        all_projects = Project.objects.all().order_by("-updated_at")
+        all_projects = Project.objects.all()
         return Response(
-            ProjectSerializer(all_projects, many=True, context={"request": request}).data,
+            ProjectSerializer(
+                all_projects, many=True, context={"request": request}
+            ).data,
             status=status.HTTP_200_OK
         )
 
-    # DELETE → Delete one → Return ALL
-    def delete(self, request, pk=None):
-        if not pk:
-            return Response(
-                {"error": "Project ID is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+    # 🔹 DELETE → DELETE ONE → RETURN ALL
+    def delete(self, request, pk):
         try:
-            project = Project.objects.get(pk=pk)
+            Project.objects.get(pk=pk).delete()
         except Project.DoesNotExist:
             return Response(
                 {"error": "Project not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        project.delete()
-
-        all_projects = Project.objects.all().order_by("-updated_at")
+        all_projects = Project.objects.all()
         return Response(
-            ProjectSerializer(all_projects, many=True, context={"request": request}).data,
+            ProjectSerializer(
+                all_projects, many=True, context={"request": request}
+            ).data,
             status=status.HTTP_200_OK
         )
 
 
-
-# class projectListAPIView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def get(self, request):
-#         category = request.GET.get("category")
-#         queryset = Project.objects.filter(is_active=True)
-
-#         if category:
-#             queryset = queryset.filter(category__slug=category)
-
-#         serializer = ProjectSerializer(queryset, many=True)
-#         return Response(serializer.data)
-    
-# class ProjectDetailAPIView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def get(self, request, pk):
-#         try:
-#             project = Project.objects.get(pk=pk, is_active=True)
-#             serializer = ProjectSerializer(project)
-#             return Response(serializer.data)
-#         except Project.DoesNotExist:
-#             return Response(
-#                 {"error": "Project not found"},
-#                 status=status.HTTP_404_NOT_FOUND
-#             )
             
-# class ProjectAdminAPIView(APIView):
-#     permission_classes = [IsAdminUser]
+# -------------------------Get Involved Section API Views------------------------
 
-#     def post(self, request):
-#         serializer = ProjectSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-#         return Response(serializer.data, status=201)
-    
-#     def put(self, request, pk):
-#         project = Project.objects.get(pk=pk)
-#         serializer = ProjectSerializer(project, data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-#         return Response(serializer.data)
-    
-#     def delete(self, request, pk):
-#         try:
-#             project = Project.objects.get(pk=pk)
-#             project.delete()
-#             return Response(
-#                 {"message": "Project deleted successfully"},
-#                 status=status.HTTP_204_NO_CONTENT
-#             )
-#         except Project.DoesNotExist:
-#             return Response(
-#                 {"error": "This project is already deleted or does not exist"},
-#                 status=status.HTTP_404_NOT_FOUND
-#             )
-            
-# Get Involved Section API Views
 class DonationAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -1506,26 +1452,135 @@ class VolunteerCreateAPIView(APIView):
     
 class CorporatePartnershipSectionAPIView(APIView):
     permission_classes = [AllowAny]
-    
-    def get(self, request):
-        sections = CorporatePartnershipSection.objects.filter(
-            is_active=True
-        ).order_by("order")
-        serializer = CorporatePartnershipSectionSerializer(sections, many=True)
-        return Response(serializer.data)
-    
-class CorporatePartnershipSectionCreateAPIView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsSuperUser] 
 
+    # GET – Fetch all records
+    def get(self, request):
+        sections = CorporatePartnershipSection.objects.order_by("order")
+        serializer = CorporatePartnershipSectionSerializer(sections, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # POST – Add multiple records
     def post(self, request):
-        serializer = CorporatePartnershipSectionSerializer(data=request.data)
+        serializer = CorporatePartnershipSectionSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Section created successfully"})
-        return Response(serializer.errors, status=400)
+            return Response(
+                {"message": "Records created successfully", "data": serializer.data},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # PUT – Update record ID-wise
+    def put(self, request, pk):
+        try:
+            section = CorporatePartnershipSection.objects.get(pk=pk)
+        except CorporatePartnershipSection.DoesNotExist:
+            return Response({"error": "Record not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CorporatePartnershipSectionSerializer(section, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "Record updated successfully", "data": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # DELETE – Delete record ID-wise
+    def delete(self, request, pk):
+        try:
+            section = CorporatePartnershipSection.objects.get(pk=pk)
+        except CorporatePartnershipSection.DoesNotExist:
+            return Response({"error": "Record not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        section.delete()
+        return Response(
+            {"message": "Record deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+        
+
+class EventsAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    # GET – Fetch all events
+    def get(self, request):
+        events = Events.objects.all().order_by("-event_date")
+        serializer = EventsSerializer(
+            events, many=True, context={"request": request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # POST – Create event & return all events
+    def post(self, request):
+        serializer = EventsSerializer(
+            data=request.data, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            events = Events.objects.all().order_by("-event_date")
+            return Response(
+                {
+                    "message": "Event created successfully",
+                    "data": EventsSerializer(
+                        events, many=True, context={"request": request}
+                    ).data
+                },
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # PUT – Update event by ID & return all events
+    def put(self, request, pk):
+        try:
+            event = Events.objects.get(pk=pk)
+        except Events.DoesNotExist:
+            return Response(
+                {"error": "Event not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = EventsSerializer(
+            event, data=request.data, partial=True, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            events = Events.objects.all().order_by("-event_date")
+            return Response(
+                {
+                    "message": "Event updated successfully",
+                    "data": EventsSerializer(
+                        events, many=True, context={"request": request}
+                    ).data
+                },
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # DELETE – Delete event by ID & return all events
+    def delete(self, request, pk):
+        try:
+            event = Events.objects.get(pk=pk)
+        except Events.DoesNotExist:
+            return Response(
+                {"error": "Event not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        event.delete()
+        events = Events.objects.all().order_by("-event_date")
+        return Response(
+            {
+                "message": "Event deleted successfully",
+                "data": EventsSerializer(
+                    events, many=True, context={"request": request}
+                ).data
+            },
+            status=status.HTTP_200_OK
+        )
     
-# Contact Section API Views
+# ------------------------------Contact Section API Views-------------------------
+
 class ContactHeaderAPIView(APIView):
     permission_classes = [AllowAny]
 
